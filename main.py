@@ -127,7 +127,7 @@ class Security_Scanner:
             
     def scanner(self) -> List[Dict]:
         print(f"\n{colorama.Fore.BLUE}Starting security scan of {self.target_url}{colorama.Style.RESET_ALL}\n")
-        self.crawl(self.target_url)
+        self.crawler(self.target_url)
         
         with ThreadPoolExecutor(max_workers=5) as executor:
             for url in self.visited_urls:
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     
     target_url = sys.argv[1]
     scanner = Security_Scanner(target_url)
-    vulnerabilities = scanner.scan()
+    vulnerabilities = scanner.scanner()
 
     # Print summary
     print(f"\n{colorama.Fore.GREEN}Scan Complete!{colorama.Style.RESET_ALL}")
