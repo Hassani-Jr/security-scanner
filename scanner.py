@@ -124,6 +124,45 @@ class Security_Scanner:
 
         except Exception as e:
             print(f"Error checking sensitive information on {url}: {str(e)}")
+    
+    def check_for_CSRF(self,url:str) -> None:
+        payload = {'test':'test'}
+        response = self.session.post(url,data=payload)
+        
+        request = response.request
+        
+        is_there_csrf_token = self.check_csrf_token(request)
+        is_there_headers = self.check_headers(request)
+        is_there_referer = self.check_referer_header(request)
+        
+        if not is_there_csrf_token or not is_there_headers or not is_there_referer:
+            self.report_vulnerabilities({
+                'type': 'CSRF Found',
+                'url' : url,
+                "CSRF Token" : "Missing" if not is_there_csrf_token else "Present",
+                "Required Headers" : "Missing" if not is_there_headers else "Valid",
+                "Referer Header" : "Missing" if not is_there_referer else "Present"
+            })
+
+    
+    def check_csrf_token(request: requests.PreparedRequest) -> bool:
+        if request.method in ['GET','POST','DELETE']:
+            body = request.body or ''
+            if 'csrf' not in body.lower() and 'token' not in body.lower():
+                return False
+        return True
+    
+    def check_headers(request: requests.PreparedRequest) -> bool:
+        required_headers = ["X-CSRF-Token", "X-Requested-With"]
+        for header in required_headers:
+            if header not in request.headers:
+                return False
+        return True
+    
+    def check_referer_header(request: requests.PreparedRequest) -> bool:
+        if "Origin" not in request.headers and "Referer" not in request.headers:
+            return False
+        return True
             
     def scanner(self) -> List[Dict]:
         print(f"\n{colorama.Fore.BLUE}Starting security scan of {self.target_url}{colorama.Style.RESET_ALL}\n")
@@ -134,6 +173,7 @@ class Security_Scanner:
                 executor.submit(self.check_for_xss,url)
                 executor.submit(self.check_for_sensitive_info,url)
                 executor.submit(self.check_sql_injections,url)
+                executor.submit(self.check_for_CSRF,url)
         
         return self.vulnerabilities
     
